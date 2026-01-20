@@ -87,4 +87,24 @@ else:
             res = []
             for ax in range(1, 7):
                 t1, t2 = f"({ax},2100,00,1814", f"({ax},2200,00,"
-                h, d = "N/
+                h, d = "N/A", 0
+                for i in range(len(lines)-1, -1, -1):
+                    if t1 in lines[i]:
+                        for j in range(i, min(i+15, len(lines))):
+                            if t2 in lines[j] and j+1 < len(lines) and "OK:" in lines[j+1]:
+                                h = lines[j+1].split("OK:")[1].strip().split()[0]
+                                d = int(h, 16)
+                                break
+                        if h != "N/A": break
+                res.append({"軸向": f"J{ax}", "十六進位": h, "圈數": f"{d:,}"})
+            st.dataframe(pd.DataFrame(res), use_container_width=True, hide_index=True)
+            st.success("數據提取成功")
+
+    with tab2:
+        st.write("#### 網頁版 CS 1.6")
+        if st.button("🎮 進入遊戲並記錄"):
+            st.session_state.search_history.append({"Time": datetime.now().strftime("%H:%M"), "Action": "開啟CS1.6", "Target": "WebGame"})
+            st.toast("遊戲紀錄已存檔")
+        
+        # 遊戲組件
+        components.iframe("https://play-cs.com/en/servers", height=600, scrolling=True)
