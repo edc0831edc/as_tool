@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime
 import hashlib
 
-# --- 1. 核心邏輯與狀態 ---
+# --- 1. 核心邏輯 ---
 def make_hashes(p): return hashlib.sha256(str.encode(p)).hexdigest()
 def check_hashes(p, h): return make_hashes(p) == h
 ADMIN_HASH = "104313f8e32d0834371900115049303a863d11b5e390c507c394c8e7e17a3a80"
@@ -11,147 +11,142 @@ ADMIN_HASH = "104313f8e32d0834371900115049303a863d11b5e390c507c394c8e7e17a3a80"
 if "logged_in_user" not in st.session_state: st.session_state.logged_in_user = "guest"
 if "search_history" not in st.session_state: st.session_state.search_history = []
 if "show_menu" not in st.session_state: st.session_state.show_menu = False
-if "luffy_size" not in st.session_state: st.session_state.luffy_size = 50
-if "bomb_count" not in st.session_state: st.session_state.bomb_count = 0
+if "luffy_lv" not in st.session_state: st.session_state.luffy_lv = 1
+if "luffy_size" not in st.session_state: st.session_state.luffy_size = 100 # 100% 為初始
+if "luffy_exp" not in st.session_state: st.session_state.luffy_exp = 20
 
-st.set_page_config(page_title="TM GUNDAM OS", layout="wide")
+st.set_page_config(page_title="BANDAM DATA SYSTEM", layout="wide")
 
-# --- 2. 仿 Gemini Share 連結風格的 CSS (深色、極簡、邊框發光) ---
+# --- 2. 仿圖中設計的專屬 CSS ---
 st.markdown("""
 <style>
-    /* 全域背景：深灰黑色 */
-    .stApp { background-color: #0b0e14; color: #e0e0e0; }
-    
-    /* 仿萬代紅導航條 */
-    .nav-header {
-        background: linear-gradient(90deg, #e60012 0%, #004a99 100%);
-        padding: 12px 25px;
-        border-radius: 5px;
-        font-family: 'Segoe UI', sans-serif;
-        font-weight: bold;
-        letter-spacing: 2px;
-        margin-bottom: 30px;
-        box-shadow: 0 4px 15px rgba(230, 0, 18, 0.3);
+    /* 全域深色背景 */
+    .stApp { background-color: #050b10; color: #5ef3ff; }
+
+    /* 頂部標題列 */
+    .bandai-header {
+        display: flex; justify-content: space-around;
+        background: rgba(0, 50, 80, 0.4);
+        border-top: 2px solid #ff0000; border-bottom: 2px solid #5ef3ff;
+        padding: 10px; font-family: 'Courier New', monospace; font-weight: bold;
     }
 
-    /* 駕駛艙主容器 */
-    .cockpit-box {
-        border: 1px solid #30363d;
-        background: rgba(22, 27, 34, 0.8);
-        border-radius: 15px;
-        padding: 40px;
-        text-align: center;
-        margin-top: 10px;
+    /* 魯夫寵物框 */
+    .pet-box {
+        border: 2px solid #5ef3ff; background: rgba(0,0,0,0.5);
+        padding: 20px; border-radius: 10px; text-align: center;
+        margin: 20px auto; max-width: 600px;
+        box-shadow: 0 0 20px rgba(94, 243, 255, 0.2);
     }
 
-    /* 魯夫氣球動態縮放 */
-    .luffy-balloon {
-        display: inline-block;
-        transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        filter: drop-shadow(0 0 10px #ffcc00);
-        margin: 20px 0;
+    /* 魯夫圖片動畫 (變大效果) */
+    .luffy-img {
+        width: 150px; border: 2px solid #ffcc00; border-radius: 10px;
+        transition: transform 0.3s ease-in-out;
     }
 
-    /* 萬代鋼彈風格按鈕 */
+    /* 數據進度條 */
+    .stat-container { text-align: left; margin: 10px 0; font-size: 14px; }
+    .stat-bar { background: #1a2a33; height: 12px; border-radius: 6px; overflow: hidden; }
+    .stat-fill-orange { background: #ff6600; height: 100%; }
+    .stat-fill-green { background: #a2ff00; height: 100%; }
+
+    /* 按鈕樣式 */
     .stButton>button {
-        background: transparent !important;
-        color: #00d4ff !important;
-        border: 1px solid #00d4ff !important;
-        border-radius: 4px !important;
-        padding: 10px 24px !important;
-        transition: 0.3s;
+        background: linear-gradient(180deg, #004a99 0%, #002244 100%) !important;
+        color: white !important; border: 1px solid #5ef3ff !important;
+        width: 100%; border-radius: 5px; height: 45px;
     }
-    .stButton>button:hover {
-        background: rgba(0, 212, 255, 0.1) !important;
-        box-shadow: 0 0 15px #00d4ff;
-    }
-
-    /* 側邊欄調整 */
-    [data-testid="stSidebar"] { background-color: #0d1117 !important; border-right: 1px solid #30363d; }
-    
-    /* 數據表格美化 */
-    [data-testid="stMetricValue"] { color: #ffcc00 !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 3. 介面頂部 ---
-st.markdown("<div class='nav-header'>SYSTEM LOG: UC 0079 | BANDAI GUNDAM PROTOCOL</div>", unsafe_allow_html=True)
+# --- 3. 頂部 UI ---
+st.markdown("""
+<div class='bandai-header'>
+    <span style='color:white;'>◢ BANDAI HOBBY</span>
+    <span style='color:#5ef3ff;'>BANDAM DATA SYSTEM</span>
+    <span style='color:red;'>G.U.EST SYSTEM</span>
+</div>
+""", unsafe_allow_html=True)
 
-# --- 4. 側邊欄 ---
+# --- 4. 側邊欄紀錄 ---
 with st.sidebar:
-    st.markdown("### 駕駛員認證")
+    st.markdown("### [ SYSTEM AUTH ]")
     if st.session_state.logged_in_user == "guest":
-        u = st.text_input("PILOT ID", placeholder="admin")
-        p = st.text_input("PASSKEY", type="password")
-        if st.button("AUTHENTICATE"):
+        u = st.text_input("PILOT ID")
+        p = st.text_input("PASSWORD", type="password")
+        if st.button("VERIFY"):
             if u == "admin" and check_hashes(p, ADMIN_HASH):
-                st.session_state.logged_in_user = "admin"
-                st.rerun()
+                st.session_state.logged_in_user = "admin"; st.rerun()
     else:
-        st.success(f"ONLINE: {st.session_state.logged_in_user.upper()}")
-        if st.button("LOGOUT"):
-            st.session_state.logged_in_user = "guest"
-            st.rerun()
+        st.success(f"ONLINE: {st.session_state.logged_in_user}")
+        if st.button("LOGOUT"): st.session_state.logged_in_user = "guest"; st.rerun()
+        if st.session_state.logged_in_user == "admin":
+            st.markdown("---")
+            st.write("📋 任務紀錄")
+            st.dataframe(pd.DataFrame(st.session_state.search_history), hide_index=True)
 
-# --- 5. 首頁：魯夫氣球電子雞 ---
+# --- 5. 主頁面：ONE PIECE PET SYSTEM ---
 if not st.session_state.show_menu:
-    col_l, col_r = st.columns([2, 1])
+    st.markdown("<h2 style='text-align:center; letter-spacing:3px;'>“ONE PIECE PET SYSTEM”</h2>", unsafe_allow_html=True)
     
-    with col_l:
-        st.markdown("<div class='cockpit-box'>", unsafe_allow_html=True)
-        # 魯夫圖像 (Emoji 代表，可隨 size 縮放)
-        scale = st.session_state.luffy_size / 50
+    # 魯夫區塊
+    with st.container():
+        # 依照 size 比例縮放魯夫
+        zoom = st.session_state.luffy_size / 100
         st.markdown(f"""
-            <div class='luffy-balloon' style='transform: scale({scale});'>
-                <div style='font-size: 80px;'>👒</div>
-                <div style='font-size: 100px;'>🍖</div>
+        <div class='pet-box'>
+            <div style='transform: scale({zoom}); display:inline-block;'>
+                <img src='https://img.vavel.com/luffy-gear-5-1691176219803.jpg' class='luffy-img'>
             </div>
-        """, unsafe_allow_html=True)
-        
-        st.markdown(f"### 魯夫壓力值：{st.session_state.luffy_size}% / 200%")
-        st.markdown(f"**累計爆炸次數：{st.session_state.bomb_count}**")
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    with col_r:
-        st.write("### 交互指令")
-        if st.button("🍖 餵食 (RUBBER GUM-GUM)"):
-            st.session_state.luffy_size += 30
-            st.session_state.search_history.append({"時間": datetime.now().strftime("%H:%M"), "動作": "餵食", "對象": "魯夫"})
+            <p style='margin-top:10px;'>🍖 正在待機中... 🍖</p>
             
-            if st.session_state.luffy_size > 200:
-                st.toast("魯夫到達極限了！")
-                st.session_state.bomb_count += 1
-                st.session_state.luffy_size = 50
-                st.error("💥 魯夫像氣球一樣爆炸了！系統重新啟動...")
+            <div class='stat-container'>
+                LV.{st.session_state.luffy_lv} 魯夫 [LUFFY] <br>
+                HUNGER (能源): {st.session_state.luffy_size}%
+                <div class='stat-bar'><div class='stat-fill-orange' style='width:{min(st.session_state.luffy_size/2.5, 100)}%'></div></div>
+                EXP (經驗): {st.session_state.luffy_exp}%
+                <div class='stat-bar'><div class='stat-fill-green' style='width:{st.session_state.luffy_exp}%'></div></div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # 底部按鈕區
+    col_a, col_b, col_c = st.columns(3)
+    with col_a:
+        if st.button("FEED ME (餵食)"):
+            st.session_state.luffy_size += 30
+            st.session_state.luffy_exp = min(100, st.session_state.luffy_exp + 10)
+            st.session_state.search_history.append({"Time": datetime.now().strftime("%H:%M"), "Action": "Feed Luffy"})
+            
+            if st.session_state.luffy_size > 250:
+                st.error("💥 LUFFY OVERLOAD! 魯夫爆炸了！")
                 st.balloons()
+                st.session_state.luffy_size = 100 # 重生
+                st.session_state.luffy_lv += 1
             st.rerun()
             
-        if st.button("🛠️ 啟動全功能選單"):
+    with col_b:
+        if st.button("SYSTEM MENU"):
             st.session_state.show_menu = True
             st.rerun()
+            
+    with col_c:
+        if st.button("RESET PET"):
+            st.session_state.luffy_size = 100
+            st.session_state.luffy_lv = 1
+            st.rerun()
 
-# --- 6. 功能選單頁面 ---
+# --- 6. 功能選單 ---
 else:
-    if st.button("← EXIT TO COCKPIT"):
-        st.session_state.show_menu = False
-        st.rerun()
-
-    tab1, tab2, tab3 = st.tabs(["[ 數據分析 ]", "[ 娛樂終端 ]", "[ 系統紀錄 ]"])
-
-    with tab1:
-        st.markdown("#### 鋼彈軸向數據解析")
-        file = st.file_uploader("UPLOAD LOG FILE", type=["log", "txt"])
-        if file:
-            # (此處插入你原有的 Log 解析邏輯程式碼)
-            st.success("DATA PARSED SUCCESSFULLY.")
-
-    with tab2:
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown('<a href="https://play-cs.com/zh/servers" target="_blank" class="game-link-button" style="color:#00d4ff; text-decoration:none;">🎮 開啟 CS 1.6 (NEW WINDOW)</a>', unsafe_allow_html=True)
-        with col2:
-            st.markdown('<a href="http://game.slime.com.tw/" target="_blank" class="game-link-button" style="color:#00d4ff; text-decoration:none;">👾 史萊姆遊戲區 (NEW WINDOW)</a>', unsafe_allow_html=True)
-
-    with tab3:
-        if st.session_state.logged_in_user == "admin":
-            st.dataframe(pd.DataFrame(st.session_state.search_history), use_container_width=True)
+    if st.button("↩ BACK TO SYSTEM"):
+        st.session_state.show_menu = False; st.rerun()
+    
+    t1, t2 = st.tabs(["[ DATA ANALYZER ]", "[ ENTERTAINMENT ]"])
+    with t1:
+        st.subheader("🤖 機械臂軸向解析")
+        file = st.file_uploader("UPLOAD LOG")
+        if file: st.success("數據讀取中...")
+    with t2:
+        st.markdown('<a href="https://play-cs.com/zh/servers" target="_blank" style="text-decoration:none;"><div style="background:#e60012; color:white; padding:15px; text-align:center; border-radius:5px;">🎮 進入 CS 1.6 戰場</div></a>', unsafe_allow_html=True)
+        st.markdown('<a href="http://game.slime.com.tw/" target="_blank" style="text-decoration:none;"><div style="background:#004a99; color:white; padding:15px; text-align:center; border-radius:5px; margin-top:10px;">👾 史萊姆遊戲區</div></a>', unsafe_allow_html=True)
