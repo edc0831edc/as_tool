@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import hashlib
+import streamlit.components.v1 as components
 
 # --- 1. 安全加密工具 ---
 def make_hashes(p): return hashlib.sha256(str.encode(p)).hexdigest()
@@ -28,32 +29,23 @@ st.markdown("""
     .robot-card { border: 1px solid #ddd; border-radius: 12px; padding: 25px; text-align: center; background: #f9f9f9; }
     
     @media (max-width: 600px) {
-        .stButton>button { width: 100% !important; height: 55px !important; font-size: 18px !important; }
+        .stButton>button { width: 100% !important; height: 50px !important; }
     }
     
     [data-testid="stSidebar"] { background-color: #1a1a1a !important; }
     [data-testid="stSidebar"] * { color: #ffffff !important; }
     
-    /* 自定義新視窗按鈕樣式 */
-    .game-link {
-        display: block;
-        width: 100%;
-        text-align: center;
-        background-color: #004a99;
-        color: white !important;
-        padding: 15px;
-        text-decoration: none;
-        border-radius: 5px;
-        font-weight: bold;
-        margin-top: 10px;
-    }
+    .stButton>button { background-color: #004a99 !important; color: white !important; font-weight: bold; }
+    
+    /* 遊戲區標題樣式 */
+    .game-title { color: #004a99; font-weight: bold; margin-top: 10px; }
 </style>
 """, unsafe_allow_html=True)
 
 # --- 4. 頂部導航 ---
 st.markdown("<div class='nav-header'><b>TM ROBOT | AI Service</b></div>", unsafe_allow_html=True)
 
-# --- 5. 側邊欄：管理員驗證 ---
+# --- 5. 側邊欄：管理員後台 ---
 with st.sidebar:
     st.title("⚙️ 控制中心")
     if st.session_state.logged_in_user == "guest":
@@ -73,14 +65,14 @@ with st.sidebar:
 
     if st.session_state.logged_in_user == "admin":
         st.markdown("---")
-        st.subheader("📋 訪客活動紀錄")
+        st.subheader("📋 系統活動紀錄")
         if st.session_state.search_history:
             st.dataframe(pd.DataFrame(st.session_state.search_history), use_container_width=True, hide_index=True)
             if st.button("清空所有紀錄"):
                 st.session_state.search_history = []
                 st.rerun()
 
-# --- 6. 主頁面 ---
+# --- 6. 主內容區域 ---
 if not st.session_state.show_menu:
     st.markdown("<h2 style='text-align:center;'>您好！我是 TM 數據助理</h2>", unsafe_allow_html=True)
     st.markdown("<div class='robot-card'><div style='font-size:60px;'>🤖</div><h4>系統已連線</h4></div>", unsafe_allow_html=True)
@@ -92,7 +84,8 @@ else:
         st.session_state.show_menu = False
         st.rerun()
     
-    tab1, tab2 = st.tabs(["🔄 運轉圈數查詢", "🎮 CS 1.6 網頁版"])
+    # 三個功能標籤
+    tab1, tab2, tab3 = st.tabs(["🔄 圈數查詢", "🎮 CS 1.6", "🕹️ 史萊姆遊戲"])
     
     with tab1:
         file = st.file_uploader("選擇 Log 檔案", type=["log", "txt"])
@@ -115,18 +108,18 @@ else:
             st.dataframe(pd.DataFrame(res), use_container_width=True, hide_index=True)
 
     with tab2:
-        st.markdown("### 🎮 經典戰場：CS 1.6")
-        st.write("點擊下方按鈕將開啟獨立視窗進入遊戲。")
-        
-        # 使用 HTML 製作開啟新視窗的連結按鈕
+        st.markdown("<h3 class='game-title'>經典戰場 CS 1.6</h3>", unsafe_allow_html=True)
         game_url = "https://play-cs.com/zh/servers"
-        st.markdown(f'<a href="{game_url}" target="_blank" class="game-link">🚀 進入遊戲 (新視窗開啟)</a>', unsafe_allow_html=True)
-        
-        # 紀錄行為
-        if st.button("點此向後台報備進入遊戲"):
-            st.session_state.search_history.append({
-                "時間": datetime.now().strftime("%H:%M"),
-                "動作": "進入遊戲",
-                "細節": "開啟新視窗 CS 1.6"
-            })
+        st.markdown(f'<a href="{game_url}" target="_blank" style="text-decoration:none;"><div style="background-color:#004a99; color:white; padding:15px; text-align:center; border-radius:5px; font-weight:bold;">🚀 開啟新分頁進入 CS 1.6</div></a>', unsafe_allow_html=True)
+        if st.button("記錄進入 CS 1.6"):
+            st.session_state.search_history.append({"時間": datetime.now().strftime("%H:%M"), "動作": "遊戲", "細節": "CS 1.6"})
+
+    with tab3:
+        st.markdown("<h3 class='game-title'>🕹️ 史萊姆第一個家</h3>", unsafe_allow_html=True)
+        if st.button("記錄使用遊戲區"):
+            st.session_state.search_history.append({"時間": datetime.now().strftime("%H:%M"), "動作": "遊戲", "細節": "史萊姆遊戲區"})
             st.toast("已紀錄至後台")
+        
+        # 嵌入史萊姆網頁
+        slime_url = "http://game.slime.com.tw/"
+        components.iframe(slime_url, height=800, scrolling=True)
