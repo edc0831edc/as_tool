@@ -1,8 +1,21 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+import hashlib
 
-# 1. 初始化狀態 (確保所有變數都存在)
+# --- 1. 安全加密工具 ---
+def make_hashes(password):
+    return hashlib.sha256(str.encode(password)).hexdigest()
+
+def check_hashes(password, hashed_text):
+    if make_hashes(password) == hashed_text:
+        return True
+    return False
+
+# 預設管理員密碼的 Hash 值 (這是 666 的加密值)
+ADMIN_HASH = "104313f8e32d0834371900115049303a863d11b5e390c507c394c8e7e17a3a80"
+
+# --- 2. 系統初始化 ---
 if "page_title" not in st.session_state:
     st.session_state.page_title = "TM ROBOT AI Assistant"
 if "logged_in_user" not in st.session_state:
@@ -14,160 +27,163 @@ if "show_robot_menu" not in st.session_state:
 
 st.set_page_config(page_title=st.session_state.page_title, layout="wide")
 
-# 2. 核心 CSS 樣式 (修正文字顯色與區塊對比)
-st.markdown("""
+# --- 3. 手機優化與 TM 視覺 CSS ---
+st.markdown(f"""
 <style>
-    .stApp { background-color: #ffffff; }
+    .stApp {{ background-color: #ffffff; }}
     
-    /* 頂部導航列樣式 */
-    .nav-header {
+    /* 手機字體調整 */
+    @media (max-width: 600px) {{
+        .hero-title {{ font-size: 24px !important; }}
+        .robot-icon {{ font-size: 60px !important; }}
+        .stButton>button {{ width: 100% !important; }}
+    }}
+
+    /* 頂部導航列 */
+    .nav-header {{
         background-color: #1a1a1a;
-        padding: 15px 40px;
+        padding: 10px 20px;
         display: flex;
         justify-content: space-between;
         align-items: center;
         color: white;
-        margin-bottom: 20px;
-    }
+        border-bottom: 3px solid #004a99;
+    }}
 
-    /* 機器人互動區 */
-    .robot-box {
-        border: 1px solid #e0e0e0;
-        border-radius: 12px;
-        padding: 50px;
+    /* 機器人啟動區 */
+    .robot-card {{
+        border: 1px solid #eee;
+        border-radius: 15px;
+        padding: 30px;
         text-align: center;
-        background-color: #fcfcfc;
-        margin-top: 50px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-    }
+        background: #fdfdfd;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        margin-bottom: 20px;
+    }}
 
-    /* 側邊欄深色文字修正 */
-    [data-testid="stSidebar"] { background-color: #1a1a1a !important; }
-    [data-testid="stSidebar"] *, [data-testid="stSidebar"] p, [data-testid="stSidebar"] label {
-        color: #ffffff !important;
-    }
+    /* 側邊欄加密區塊樣式 */
+    [data-testid="stSidebar"] {{
+        background-color: #1a1a1a !important;
+        border-right: 1px solid #333;
+    }}
+    [data-testid="stSidebar"] * {{ color: #ffffff !important; }}
 
-    /* 強制主頁面文字為深灰色 */
-    h1, h2, h3, p, label, .stMarkdown {
-        color: #1a1a1a !important;
-    }
-
-    /* TM 藍色方塊按鈕 */
-    .stButton>button {
+    /* TM 藍色按鈕 */
+    .stButton>button {{
         background-color: #004a99 !important;
         color: white !important;
-        border-radius: 2px !important;
-        border: none !important;
-    }
+        border-radius: 4px !important;
+        font-weight: 600;
+    }}
 </style>
 """, unsafe_allow_html=True)
 
-# --- 3. 頂部導覽列 ---
+# --- 4. 頂部導航列 ---
 st.markdown(f"""
 <div class='nav-header'>
-    <div style='font-size: 22px; font-weight: 700;'>TM ROBOT <span style='font-weight: 300;'>| Data Service</span></div>
+    <div style='font-size: 18px; font-weight: 700;'>TM ROBOT <span style='font-weight: 300;'>| Intelligence</span></div>
 </div>
 """, unsafe_allow_html=True)
 
-# --- 4. 側邊欄與管理員選單 ---
+# --- 5. 側邊欄：安全性管控後台 ---
 with st.sidebar:
-    st.markdown("### ⚙️ System Settings")
-    # 帳戶頭像與登入 (Popover)
-    current_user = st.session_state.logged_in_user
-    label_text = f"👤 {current_user.upper()}"
-    with st.popover(label_text):
-        if current_user == "guest":
-            u = st.text_input("Admin ID")
-            p = st.text_input("Password", type="password")
-            if st.button("Login"):
-                if u == "admin" and p == "666":
+    st.markdown("### 🔐 安全管理中心")
+    
+    # 帳戶登入與加密校驗
+    if st.session_state.logged_in_user == "guest":
+        with st.expander("管理員登入"):
+            user_input = st.text_input("Admin ID")
+            pass_input = st.text_input("Security Key", type="password")
+            if st.button("驗證身分"):
+                if user_input == "admin" and check_hashes(pass_input, ADMIN_HASH):
                     st.session_state.logged_in_user = "admin"
+                    st.success("身分已確認")
                     st.rerun()
                 else:
-                    st.error("Invalid Credentials")
-        else:
-            st.write(f"Logged in as: {current_user}")
-            if st.button("Logout"):
-                st.session_state.logged_in_user = "guest"
-                st.rerun()
+                    st.error("密碼錯誤或權限不足")
+    else:
+        st.write(f"當前身分：{st.session_state.logged_in_user}")
+        
+        # 後台修改權限控管
+        st.markdown("---")
+        st.markdown("#### 🛠️ 核心設置")
+        new_title = st.text_input("修改網頁標題", st.session_state.page_title)
+        if st.button("更新網站資訊"):
+            st.session_state.page_title = new_title
+            st.toast("設定已更新")
+            st.rerun()
 
-    st.markdown("---")
-    
-    # 搜尋紀錄 (僅管理員可見)
-    if st.session_state.logged_in_user == "admin":
-        st.markdown("#### 📋 User Activity Log")
+        st.markdown("---")
+        st.markdown("#### 📈 搜尋歷史回溯")
         if st.session_state.search_history:
-            st.dataframe(pd.DataFrame(st.session_state.search_history), hide_index=True)
+            df = pd.DataFrame(st.session_state.search_history)
+            st.dataframe(df, use_container_width=True, hide_index=True)
         else:
-            st.info("No records yet.")
+            st.caption("目前無紀錄")
+            
+        if st.button("安全登出"):
+            st.session_state.logged_in_user = "guest"
+            st.rerun()
 
-# --- 5. 主內容區域 ---
+# --- 6. 主頁面內容 (手機適應性排版) ---
 if not st.session_state.show_robot_menu:
-    # 機器人首頁
-    st.markdown("<h1 style='text-align:center;'>您好！我是 TM 數據助理</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align:center;'>點擊下方按鈕啟動我的機器人功能。</p>", unsafe_allow_html=True)
+    st.markdown("<h2 class='hero-title' style='text-align:center; margin-top:30px;'>TM 智能助手</h2>", unsafe_allow_html=True)
     
-    col1, col2, col3 = st.columns([1, 1.5, 1])
-    with col2:
+    col_main1, col_main2, col_main3 = st.columns([1, 2, 1])
+    with col_main2:
         st.markdown("""
-        <div class='robot-box'>
-            <div style='font-size: 80px;'>🤖</div>
-            <h3 style='margin-top:20px;'>TM AI Assistant</h3>
-            <p style='color:#666 !important;'>Status: Online</p>
+        <div class='robot-card'>
+            <div class='robot-icon' style='font-size: 80px;'>🤖</div>
+            <p style='color:#666 !important; margin-top:10px;'>服務狀態：已連線</p>
         </div>
         """, unsafe_allow_html=True)
-        if st.button("啟動功能選單 ＞", use_container_width=True):
+        
+        if st.button("啟動運轉圈數查詢 ＞", use_container_width=True):
             st.session_state.show_robot_menu = True
             st.rerun()
 else:
-    # 功能選單頁面
-    st.markdown("### 🤖 機器人助手：功能清單")
-    if st.button("← 返回首頁"):
+    # 功能內頁
+    st.markdown("### 🔄 運轉圈數解析系統")
+    if st.button("← 返回"):
         st.session_state.show_robot_menu = False
         st.rerun()
-    
+
     st.write("---")
     
-    # 功能區標籤
-    tab1, tab2 = st.tabs(["🔄 運轉圈數查詢", "🔧 更多工具"])
-    
-    with tab1:
-        c1, c2 = st.columns([1, 2])
-        with c1:
-            st.markdown("#### Log 檔案分析")
-            st.write("請將檔案拖曳至下方：")
-            file = st.file_uploader("", type=["log", "txt"])
+    # 使用 Container 讓手機顯示更整齊
+    with st.container():
+        st.markdown("#### 1. 上傳檔案")
+        uploaded_file = st.file_uploader("選擇 Log 或 TXT 檔案", type=["log", "txt"])
+        
+        if uploaded_file:
+            # 自動紀錄
+            st.session_state.search_history.append({
+                "時間": datetime.now().strftime("%m/%d %H:%M"),
+                "帳戶": st.session_state.logged_in_user,
+                "檔名": uploaded_file.name
+            })
             
-        with c2:
-            if file:
-                # 紀錄搜尋紀錄
-                st.session_state.search_history.append({
-                    "Timestamp": datetime.now().strftime("%H:%M:%S"),
-                    "User": st.session_state.logged_in_user,
-                    "File": file.name
-                })
+            # 數據解析邏輯
+            content = uploaded_file.read().decode("utf-8")
+            lines = content.splitlines()
+            parsed_data = []
+            
+            for axis in range(1, 7):
+                tag2100 = f"({axis},2100,00,1814"
+                tag2200 = f"({axis},2200,00,"
+                h_val, d_val = "N/A", 0
                 
-                # 提取邏輯
-                lines = file.read().decode("utf-8").splitlines()
-                final_results = []
-                for axis in range(1, 7):
-                    t2100 = f"({axis},2100,00,1814"
-                    t2200 = f"({axis},2200,00,"
-                    hex_s, dec_s = "N/A", 0
-                    
-                    for i in range(len(lines)-1, -1, -1):
-                        if t2100 in lines[i]:
-                            for j in range(i, min(i+15, len(lines))):
-                                if t2200 in lines[j] and j+1 < len(lines) and "OK:" in lines[j+1]:
-                                    hex_s = lines[j+1].split("OK:")[1].strip().split()[0]
-                                    dec_s = int(hex_s, 16)
-                                    break
-                            if hex_s != "N/A": break
-                    final_results.append({"軸向": f"J{axis}", "Hex": hex_s, "十進位圈數": f"{dec_s:,}"})
-                
-                st.markdown("#### 解析結果清單")
-                st.table(pd.DataFrame(final_results))
-                st.success("數據提取成功。")
-
-    with tab2:
-        st.info("更多診斷功能開發中，敬請期待。")
+                for i in range(len(lines)-1, -1, -1):
+                    if tag2100 in lines[i]:
+                        for j in range(i, min(i+15, len(lines))):
+                            if tag2200 in lines[j] and j+1 < len(lines) and "OK:" in lines[j+1]:
+                                h_val = lines[j+1].split("OK:")[1].strip().split()[0]
+                                d_val = int(h_val, 16)
+                                break
+                        if h_val != "N/A": break
+                parsed_data.append({"軸向": f"J{axis}", "十六進位": h_val, "十進位圈數": f"{d_val:,}"})
+            
+            st.markdown("#### 2. 解析結果")
+            # 手機端使用 dataframe 比較好滑動查看
+            st.dataframe(pd.DataFrame(parsed_data), use_container_width=True, hide_index=True)
+            st.success("數據提取完畢")
